@@ -9,20 +9,23 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 #Preparando bibliotecas
-#install.packages("tidyr")
+#install.packages("dplyr")
 #install.packages("plotly")
-#library(dplyr)
+#install.packages("tidyr")
 
 rm(list = ls())
-library(tidyr)
+library(dplyr)
 library(plotly)
+library(tidyr)
 ```
 
-## Definindo limites
+## Mapeamento de quadrantes com endereços importantes de Manhattan
+
+Definidando coordenadas limites da área de NY a ser estudada, no caso Manhattan.
 
 ```{r }
-cfg <- list(x.min =  40.70, x.max =  40.82, y.step = 0.02,
-            y.min = -74.04, y.max = -73.92, x.step = 0.02)
+cfg <- list(x.min =  40.70, x.max =  40.82, y.step = 0.002,
+            y.min = -74.04, y.max = -73.92, x.step = 0.002)
 
 cfg$x.lim <- seq( from = cfg$x.min, to = cfg$x.max, by = cfg$x.step)
 cfg$y.lim <- seq( from = cfg$y.min, to = cfg$y.max, by = cfg$y.step)
@@ -33,7 +36,7 @@ cfg$x <- paste0('X', seq_len(cfg$x.qtde))
 cfg$y <- paste0('Y', seq_len(cfg$y.qtde))
 ```
 
-Atribuindo nomes aos quadrantes.
+Atribuindo nomeclatura generica aos quadrantes.
 
 ```{r }
 cfg$all <- paste0('q', seq_len(cfg$all.qtde))
@@ -44,40 +47,73 @@ colnames(mapa) <- cfg$x
 row.names(mapa) <- cfg$y
 ```
 
+Definindo coordenadas de limites de cada quadrante.
 
 ```{r }
-mapa.att <- data.frame(names=cfg$all, row.names = cfg$all)
-mapa.att <- mutate( mapa.att,
-                    x = rep(cfg$x, each=6),
-                    y = rep(cfg$y, 6),
-                    x.down = rep( cfg$x.lim[1:6], each=6),
-                    x.top = rep( cfg$x.lim[2:7], each=6),
-                    y.left = rep( cfg$y.lim[1:6], 6),
-                    y.rigth = rep( cfg$y.lim[2:7], 6))
+mapa.quadrantes <- data.frame(names=cfg$all, row.names = cfg$all)
+mapa.quadrantes <- mutate( mapa.quadrantes,
+                    x = rep(cfg$x, each=60),
+                    y = rep(cfg$y, 60),
+                    x.down = rep( cfg$x.lim[1:60], each=60),
+                    x.top = rep( cfg$x.lim[2:61], each=60),
+                    y.left = rep( cfg$y.lim[1:60], 60),
+                    y.rigth = rep( cfg$y.lim[2:61], 60))
 
-print(tail(mapa.att, n=1500))
+tail(mapa.quadrantes, n=100)
 ```
 
-Mapeando endereços
+Mapeando endereços conhecidos da ilha no mapa de quadrantes.
+
+  1. Estações de metrô
+  2. Galerias de arte
+  3. Parques
+  4. Bares
 
 ```{r }
-pontosInteresse = read.csv('./pontos-interesse.csv')
-
+pontosInteresse = read.csv('./data/pontos-interesse.csv')
 pontosInteresse = mutate(pontosInteresse,
                   Latitude = as.numeric(as.character(pontosInteresse$Latitude)))
 
-mapa.att2 = merge(pontosInteresse, mapa.att) %>% 
+#Identifica a qual quadrante pertencem os pontos de interesse
+locais = merge(mapa.quadrantes, pontosInteresse) %>% 
   filter(Latitude >= x.down & Latitude < x.top & Longitude >= y.left & Longitude < y.rigth)
 
-tail(mapa.att3, n=10)
+#Enriquece mapa com idetificação dos pontos existentes nos quadrantes
+mapa.locais = unique(left_join(mapa.quadrantes, locais)) %>% 
+  select(-Latitude, -Longitude)
 ```
+## Corridas de táxi
 
-Alterar dataset para atribuir os pontos de origens e destinos
+Enriquecendo dataset de corridas com os pontos de origens e destinos.
 
 ```{r }
-df = read.csv('./train.csv')
-
+corridas.taxi.train = read.csv('./data/train.csv')
+corridas.taxi = head(corridas.taxi.train, n=100)
 ```
+
+Origens:
+```{r }
+corridas.locais.origens = merge(corridas.taxi, mapa.locais) %>% 
+  filter(pickup_latitude >= x.down & pickup_latitude < x.top & pickup_longitude >= y.left & pickup_longitude < y.rigth) %>%
+  select(-x, -y, -x.down, -x.top, -y.left, -y.rigth)
+
+colnames(corridas.locais.origens)[length(corridas.locais.origens)-2] <- "pickup_quater"
+colnames(corridas.locais.origens)[length(corridas.locais.origens)-1] <- "pickup_local_type"
+colnames(corridas.locais.origens)[length(corridas.locais.origens)] <- "pickup_local"
+```
+
+Destinos:
+```{r }
+corridas.locais = merge(corridas.locais.origens, mapa.locais) %>% 
+  filter(dropoff_latitude >= x.down & dropoff_latitude < x.top & dropoff_longitude >= y.left & dropoff_longitude < y.rigth) %>%
+  select(-x, -y, -x.down, -x.top, -y.left, -y.rigth)
+
+colnames(corridas.locais)[length(corridas.locais)-2] <- "dropoff_quater"
+colnames(corridas.locais)[length(corridas.locais)-1] <- "dropoff_local_type"
+colnames(corridas.locais)[length(corridas.locais)] <- "dropoff_local"
+```
+
+## Mapeamento de rotas das corridas
 
 ```{r }
 ```
