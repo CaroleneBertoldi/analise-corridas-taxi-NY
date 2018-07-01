@@ -1,0 +1,83 @@
+---
+title: "Mapa-dos-quadrantes"
+author: "Carolene Bertoldi"
+date: "30 de junho de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Preparando bibliotecas
+#install.packages("tidyr")
+#install.packages("plotly")
+#library(dplyr)
+
+rm(list = ls())
+library(tidyr)
+library(plotly)
+```
+
+## Definindo limites
+
+```{r }
+cfg <- list(x.min =  40.70, x.max =  40.82, y.step = 0.02,
+            y.min = -74.04, y.max = -73.92, x.step = 0.02)
+
+cfg$x.lim <- seq( from = cfg$x.min, to = cfg$x.max, by = cfg$x.step)
+cfg$y.lim <- seq( from = cfg$y.min, to = cfg$y.max, by = cfg$y.step)
+cfg$x.qtde <- length(cfg$x.lim) -1
+cfg$y.qtde <- length(cfg$y.lim) -1
+cfg$all.qtde <- cfg$x.qtde * cfg$y.qtde
+cfg$x <- paste0('X', seq_len(cfg$x.qtde))
+cfg$y <- paste0('Y', seq_len(cfg$y.qtde))
+```
+
+Atribuindo nomes aos quadrantes.
+
+```{r }
+cfg$all <- paste0('q', seq_len(cfg$all.qtde))
+names(cfg$all) <- cfg$all
+
+mapa <- matrix(data=cfg$all, nrow = cfg$y.qtde)
+colnames(mapa) <- cfg$x
+row.names(mapa) <- cfg$y
+```
+
+
+```{r }
+mapa.att <- data.frame(names=cfg$all, row.names = cfg$all)
+mapa.att <- mutate( mapa.att,
+                    x = rep(cfg$x, each=6),
+                    y = rep(cfg$y, 6),
+                    x.down = rep( cfg$x.lim[1:6], each=6),
+                    x.top = rep( cfg$x.lim[2:7], each=6),
+                    y.left = rep( cfg$y.lim[1:6], 6),
+                    y.rigth = rep( cfg$y.lim[2:7], 6))
+
+print(tail(mapa.att, n=1500))
+```
+
+Mapeando endereços
+
+```{r }
+pontosInteresse = read.csv('./pontos-interesse.csv')
+
+pontosInteresse = mutate(pontosInteresse,
+                  Latitude = as.numeric(as.character(pontosInteresse$Latitude)))
+
+mapa.att2 = merge(pontosInteresse, mapa.att) %>% 
+  filter(Latitude >= x.down & Latitude < x.top & Longitude >= y.left & Longitude < y.rigth)
+
+tail(mapa.att3, n=10)
+```
+
+Alterar dataset para atribuir os pontos de origens e destinos
+
+```{r }
+df = read.csv('./train.csv')
+
+```
+
+```{r }
+```
