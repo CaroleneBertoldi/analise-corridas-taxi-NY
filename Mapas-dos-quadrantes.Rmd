@@ -34,8 +34,8 @@ cfg$y.lim <- seq( from = cfg$y.min, to = cfg$y.max, by = cfg$y.step)
 cfg$x.qtde <- length(cfg$x.lim) -1
 cfg$y.qtde <- length(cfg$y.lim) -1
 cfg$all.qtde <- cfg$x.qtde * cfg$y.qtde
-cfg$x <- paste0('X', seq_len(cfg$x.qtde))
-cfg$y <- paste0('Y', seq_len(cfg$y.qtde))
+cfg$x <- seq_len(cfg$x.qtde)
+cfg$y <- seq_len(cfg$y.qtde)
 ```
 
 Atribuindo nomeclatura generica aos quadrantes.
@@ -53,23 +53,24 @@ Definindo coordenadas de limites de cada quadrante.
 
 ```{r }
 mapa.quadrantes <- data.frame(names=cfg$all, row.names = cfg$all)
-mapa.quadrantes <- mutate( mapa.quadrantes,
+mapa.quadrantes <- mutate(mapa.quadrantes,
                     x = rep(cfg$x, each=60),
                     y = rep(cfg$y, 60),
                     x.down = rep( cfg$x.lim[1:60], each=60),
                     x.top = rep( cfg$x.lim[2:61], each=60),
                     y.left = rep( cfg$y.lim[1:60], 60),
                     y.rigth = rep( cfg$y.lim[2:61], 60))
+colnames(mapa.quadrantes)[1] <- "quarter"
 
-tail(mapa.quadrantes, n=100)
+head(mapa.quadrantes)
 ```
 
 Mapeando endereços conhecidos da ilha no mapa de quadrantes.
 
   1. Estações de metrô
-  2. Galerias de arte
-  3. Bibliotecas
-  4. Teatros
+  2. Galerias de arte*
+  3. Bibliotecas*
+  4. Teatros*
   5. Bares e restaurantes
 
 ```{r }
@@ -102,8 +103,22 @@ locais = merge(mapa.quadrantes, pontosInteresse) %>%
   select(-Latitude, -Longitude)
 
 #Enriquece mapa com idetificação dos pontos existentes nos quadrantes
-mapa.locais = left_join(mapa.quadrantes, locais)
+mapa.locais = unique(left_join(mapa.quadrantes, locais))
 ```
+
+Buscando locais de um quadrante:
+```{r }
+buscar.locais <- function(quadrante) {
+  locais.do.quadrante = mapa.locais %>% 
+    filter(quadrante == quarter)
+  locais.do.quadrante
+}
+
+local.teste = buscar.locais("q1888")
+local.teste 
+```
+
+
 ## Corridas de táxi
 
 Enriquecendo dataset de corridas com os pontos de origens e destinos.
@@ -117,9 +132,11 @@ Origens:
 ```{r }
 corridas.locais.origens = merge(corridas.taxi, mapa.quadrantes) %>% 
   filter(pickup_latitude >= x.down & pickup_latitude < x.top & pickup_longitude >= y.left & pickup_longitude < y.rigth) %>%
-  select(-x, -y, -x.down, -x.top, -y.left, -y.rigth)
+  select(-x.down, -x.top, -y.left, -y.rigth)
 
-colnames(corridas.locais.origens)[length(corridas.locais.origens)] <- "pickup_quater"
+colnames(corridas.locais.origens)[length(corridas.locais.origens)-2] <- "pickup_quater"
+colnames(corridas.locais.origens)[length(corridas.locais.origens)-1] <- "pickup_x"
+colnames(corridas.locais.origens)[length(corridas.locais.origens)] <- "pickup_y"
 
 corridas.locais.origens = left_join(corridas.taxi, corridas.locais.origens)
 ```
@@ -128,9 +145,11 @@ Destinos:
 ```{r }
 corridas.locais.destinos = merge(corridas.taxi, mapa.quadrantes) %>% 
   filter(dropoff_latitude >= x.down & dropoff_latitude < x.top & dropoff_longitude >= y.left & dropoff_longitude < y.rigth) %>%
-  select(-x, -y, -x.down, -x.top, -y.left, -y.rigth)
+  select(-x.down, -x.top, -y.left, -y.rigth)
 
-colnames(corridas.locais.destinos)[length(corridas.locais.destinos)] <- "dropoff_quater"
+colnames(corridas.locais.destinos)[length(corridas.locais.destinos)-2] <- "dropoff_quater"
+colnames(corridas.locais.destinos)[length(corridas.locais.origens)-1] <- "dropoff_x"
+colnames(corridas.locais.destinos)[length(corridas.locais.destinos)] <- "dropoff_y"
 
 corridas.locais.destinos = left_join(corridas.taxi, corridas.locais.destinos)
 ```
@@ -171,4 +190,8 @@ corridas.fora = corridas.locais %>%
 
 sprintf('%f corridas tem origem em Manhattan e destino fora', count(corridas.fora) )
 ```
+
+
+
+
 
