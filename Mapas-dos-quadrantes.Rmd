@@ -62,7 +62,8 @@ mapa.quadrantes <- mutate(mapa.quadrantes,
                     y.rigth = rep( cfg$y.lim[2:61], 60))
 colnames(mapa.quadrantes)[1] <- "quarter"
 
-head(mapa.quadrantes)
+mapa[10:1, 1:10]
+#head(mapa.quadrantes)
 ```
 
 Mapeando endereços conhecidos da ilha no mapa de quadrantes.
@@ -110,11 +111,12 @@ Buscando locais de um quadrante:
 ```{r }
 buscar.locais <- function(quadrante) {
   locais.do.quadrante = mapa.locais %>% 
-    filter(quadrante == quarter)
-  locais.do.quadrante
+    filter(quadrante == quarter) %>% 
+    select(Local, Nome)
+  locais.do.quadrante 
 }
 
-local.teste = buscar.locais("q1888")
+local.teste = buscar.locais("q1888") 
 local.teste 
 ```
 
@@ -190,6 +192,53 @@ corridas.fora = corridas.locais %>%
 
 sprintf('%f corridas tem origem em Manhattan e destino fora', count(corridas.fora) )
 ```
+
+## Rotas das corridas
+
+```{r }
+buscar.quadrante <- function(x.quadrante, y.quadrante) {
+  quadrante = mapa.quadrantes %>%
+    filter(x == x.quadrante & y == y.quadrante) %>%
+    select(quarter)
+}
+
+buscar.rotas <- function(x.origem, y.origem, x.destino, y.destino) {
+  q.origem = buscar.quadrante(x.origem, y.origem)
+  rota = c()
+
+  for (x in x.origem:x.destino){
+    rota = c(rota, buscar.quadrante(x, y.origem))
+  }
+  
+  for (y in (y.origem -1):y.destino){
+    rota = c(rota, buscar.quadrante(x.destino, y))
+  }
+
+  rota
+}
+
+#rota.teste = buscar.rotas(34, 29, 33,38)
+rota.teste = buscar.rotas(4, 4, 1, 1)
+rota.teste
+```
+
+```{r }
+corridas.rotas = mutate(corridas.dentro,
+                        rota = list(buscar.rotas(pickup_x, pickup_y, dropoff_x, dropoff_y)),
+                        locais.origem = list(buscar.locais(pickup_quater)),
+                        locais.destino = list(buscar.locais(dropoff_quater)))
+
+```
+Locais de origem:
+
+```{r }
+
+c = corridas.dentro %>%
+  buscar.rotas(pickup_x, pickup_y, dropoff_x, dropoff_y)
+c
+
+```
+
 
 
 
