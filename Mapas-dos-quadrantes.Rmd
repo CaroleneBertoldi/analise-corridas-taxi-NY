@@ -1,7 +1,4 @@
 ---
-title: "Mapa-dos-quadrantes"
-author: "Carolene Bertoldi"
-date: "30 de junho de 2018"
 output: html_document
 ---
 
@@ -21,9 +18,9 @@ library(plotly)
 library(tidyr)
 ```
 
-## Mapeamento de quadrantes com endereços importantes de Manhattan
+## Mapeamento de quadrantes com endereÃ§os importantes de Manhattan
 
-Definidando coordenadas limites da área de NY a ser estudada, no caso Manhattan.
+Definidando coordenadas limites da Ã¡rea de NY a ser estudada, no caso Manhattan.
 
 ```{r }
 cfg <- list(x.min =  40.70, x.max =  40.82, y.step = 0.002,
@@ -60,15 +57,15 @@ mapa.quadrantes <- mutate(mapa.quadrantes,
                     x.top = rep( cfg$x.lim[2:61], each=60),
                     y.left = rep( cfg$y.lim[1:60], 60),
                     y.rigth = rep( cfg$y.lim[2:61], 60))
-colnames(mapa.quadrantes)[1] <- "quarter"
+colnames(mapa.quadrantes)[1] <- "quadrant"
 
 mapa[10:1, 1:10]
-#head(mapa.quadrantes)
+head(mapa.quadrantes)
 ```
 
-Mapeando endereços conhecidos da ilha no mapa de quadrantes.
+Mapeando endereÃ§os conhecidos da ilha no mapa de quadrantes.
 
-  1. Estações de metrô
+  1. EstaÃ§Ãµes de metrÃ´
   2. Galerias de arte*
   3. Bibliotecas*
   4. Teatros*
@@ -95,7 +92,7 @@ estacoes.metro = mutate(estacoes.metro,
 estacoes.metro = estacoes.metro %>%
   filter(Latitude >= 40.70 & Latitude < 40.82 & Longitude >= -74.04 & Longitude < -73.92)
 
-#Unindo os pontos de interesse em um único dataset
+#Unindo os pontos de interesse em um Ãºnico dataset
 pontosInteresse = full_join(bares.e.restaurantes, estacoes.metro)
 
 #Identifica a qual quadrante pertence cada ponto de interesse
@@ -103,7 +100,7 @@ locais = merge(mapa.quadrantes, pontosInteresse) %>%
   filter(Latitude >= x.down & Latitude < x.top & Longitude >= y.left & Longitude < y.rigth) %>% 
   select(-Latitude, -Longitude)
 
-#Enriquece mapa com idetificação dos pontos existentes nos quadrantes
+#Enriquece mapa com idetificaÃ§Ã£o dos pontos existentes nos quadrantes
 mapa.locais = unique(left_join(mapa.quadrantes, locais))
 ```
 
@@ -111,7 +108,7 @@ Buscando locais de um quadrante:
 ```{r }
 buscar.locais <- function(quadrante) {
   locais.do.quadrante = mapa.locais %>% 
-    filter(quadrante == quarter) %>% 
+    filter(quadrante == quadrant) %>% 
     select(Local, Nome)
   locais.do.quadrante 
 }
@@ -121,18 +118,22 @@ local.teste
 ```
 
 
-## Corridas de táxi
+## Corridas de tÃ¡xi
 
 Enriquecendo dataset de corridas com os pontos de origens e destinos.
 
 ```{r }
-corridas.taxi.train = read.csv('./data/train.csv')
-corridas.taxi = head(corridas.taxi.train, n=100)
+#corridas.taxi = read.csv('./data/train.csv')
+corridas.taxi = read.csv('./data/mine-dataset-train.csv')
+corridas.taxi = head(corridas.taxi, n=1000)
 ```
 
 Origens:
 ```{r }
-corridas.locais.origens = merge(corridas.taxi, mapa.quadrantes) %>% 
+corridas.locais.origens = corridas.taxi %>%
+  filter(pickup_latitude >= 40.70 & pickup_latitude < 40.82 & pickup_longitude >= -74.04 & pickup_longitude < -73.92)
+
+corridas.locais.origens = merge(corridas.locais.origens, mapa.quadrantes) %>%
   filter(pickup_latitude >= x.down & pickup_latitude < x.top & pickup_longitude >= y.left & pickup_longitude < y.rigth) %>%
   select(-x.down, -x.top, -y.left, -y.rigth)
 
@@ -145,7 +146,10 @@ corridas.locais.origens = left_join(corridas.taxi, corridas.locais.origens)
 
 Destinos:
 ```{r }
-corridas.locais.destinos = merge(corridas.taxi, mapa.quadrantes) %>% 
+corridas.locais.destinos = corridas.taxi %>% 
+  filter(dropoff_latitude >= 40.70 & dropoff_latitude < 40.82 & dropoff_longitude >= -74.04 & dropoff_longitude < -73.92)
+
+corridas.locais.destinos = merge(corridas.locais.destinos, mapa.quadrantes) %>% 
   filter(dropoff_latitude >= x.down & dropoff_latitude < x.top & dropoff_longitude >= y.left & dropoff_longitude < y.rigth) %>%
   select(-x.down, -x.top, -y.left, -y.rigth)
 
@@ -176,7 +180,7 @@ corridas.origem.fora = corridas.locais %>%
 
 sprintf('%f corridas tem origem fora e destino em Manhattan', count(corridas.origem.fora) )
 ```
-### Quantas corridas começam e terminam dentro de Manhattan?
+### Quantas corridas comeÃ§am e terminam dentro de Manhattan?
 
 ```{r }
 corridas.dentro = corridas.locais %>%
@@ -184,7 +188,7 @@ corridas.dentro = corridas.locais %>%
 
 sprintf('%f corridas tem origem em Manhattan e destino fora', count(corridas.dentro) )
 ```
-### Quantas corridas estão fora do território de Manhattan?
+### Quantas corridas estÃ£o fora do territÃ³rio de Manhattan?
 
 ```{r }
 corridas.fora = corridas.locais %>%
@@ -193,54 +197,113 @@ corridas.fora = corridas.locais %>%
 sprintf('%f corridas tem origem em Manhattan e destino fora', count(corridas.fora) )
 ```
 
+##Análise de locais de origem:
+
+Uma corrida parte de um quadrante de origem, que pode ter mais de um local. Sendo assim, analisamos os quadrantes de origens mais comuns dentre as corridas, e os locais relacionados a estes quadrantes.
+
+```{r }
+top.5.origens <- corridas.dentro %>%
+  group_by(pickup_quater) %>%
+  tally(sort = T) %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  head()
+top.5.origens
+
+top.5.destinos <- corridas.dentro %>%
+  group_by(dropoff_quater) %>%
+  tally(sort = T) %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  head()
+top.5.destinos
+```
+
+A partir dos quadrantes top 5 de origem e destino, encontramos os locais de partida e de destinos mais comuns das corridas.
+
+```{r }
+locais.top.quater.origem = head(top.5.origens, n=1)$pickup_quater
+locais.top.quater.origem = buscar.locais(locais.top.quater.origem)
+locais.top.quater.origem
+
+locais.top.quater.destino = head(top.5.destinos, n=1)$dropoff_quater
+locais.top.quater.destino = buscar.locais(locais.top.quater.destino)
+locais.top.quater.destino
+```
+
+
 ## Rotas das corridas
 
 ```{r }
 buscar.quadrante <- function(x.quadrante, y.quadrante) {
   quadrante = mapa.quadrantes %>%
     filter(x == x.quadrante & y == y.quadrante) %>%
-    select(quarter)
+    select(quadrant)
 }
 
-buscar.rotas <- function(x.origem, y.origem, x.destino, y.destino) {
+buscar.rota <- function(x.origem, y.origem, x.destino, y.destino) {
   q.origem = buscar.quadrante(x.origem, y.origem)
-  rota = c()
+  rota = q.origem
 
-  for (x in x.origem:x.destino){
-    rota = c(rota, buscar.quadrante(x, y.origem))
+  x.aux = x.origem
+  if (x.origem < x.destino){
+    x.aux = x.aux + 1
+  } else if (x.origem > x.destino){
+    x.aux = x.aux - 1
   }
-  
-  for (y in (y.origem -1):y.destino){
-    rota = c(rota, buscar.quadrante(x.destino, y))
+  for (x in x.aux:x.destino){
+    rota = full_join(rota, buscar.quadrante(x, y.origem))
+  }
+    
+  y.aux = y.origem
+  if (y.origem < y.destino){
+    y.aux = y.aux + 1
+  } else if (y.origem > y.destino){
+    y.aux = y.aux - 1
+  }
+  for (y in y.aux:y.destino){
+    rota = full_join(rota, buscar.quadrante(x.destino, y))
   }
 
   rota
 }
 
-#rota.teste = buscar.rotas(34, 29, 33,38)
-rota.teste = buscar.rotas(4, 4, 1, 1)
-rota.teste
+#teste.rota = buscar.rotas(34, 29, 33,38)
+teste.rota = buscar.rota(4, 1, 1, 4)
+teste.rota
+
+buscar.rota.por.corrida.id <- function(corridas, corrida.id) {
+  corrida = corridas %>% 
+    filter(id == corrida.id)
+  
+    rota.corrida = buscar.rota(corrida$pickup_x, corrida$pickup_y, corrida$dropoff_x, corrida$dropoff_y)
+    rota.corrida = mutate(rota.corrida, id = corrida$id)
+    colnames(rota.corrida)[length(rota.corrida)-1] <- "rota"
+    
+    rota.corrida
+}
+
+teste.rota.id = buscar.rota.por.corrida.id(corridas.dentro, 'id2875421')
+teste.rota.id
 ```
+
+E como temos a rota, podemos verificar os locais intermediarios que uma corrida possivelmente passou para chegar ao seu destino
+
 
 ```{r }
-corridas.rotas = mutate(corridas.dentro,
-                        rota = list(buscar.rotas(pickup_x, pickup_y, dropoff_x, dropoff_y)),
-                        locais.origem = list(buscar.locais(pickup_quater)),
-                        locais.destino = list(buscar.locais(dropoff_quater)))
+buscar.locais.por.corrida.id <- function(corridas, corrida.id) {
+  rota.corrida = buscar.rota.por.corrida.id(corridas, corrida.id)
+  locais.rota = buscar.locais(rota.corrida$rota[1])
 
+  for (r in 2:length(rota.corrida$rota)) {
+    locais.rota = full_join(locais.rota, buscar.locais(rota.corrida$rota[r]))
+  }
+  
+  locais.rota
+}
+
+#Exemplo 01
+buscar.locais.por.corrida.id(corridas.dentro, 'id2875421')
 ```
-Locais de origem:
-
-```{r }
-
-c = corridas.dentro %>%
-  buscar.rotas(pickup_x, pickup_y, dropoff_x, dropoff_y)
-c
-
-```
-
-
-
-
 
 
