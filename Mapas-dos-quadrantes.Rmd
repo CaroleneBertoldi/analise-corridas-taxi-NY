@@ -92,8 +92,18 @@ estacoes.metro = mutate(estacoes.metro,
 estacoes.metro = estacoes.metro %>%
   filter(Latitude >= 40.70 & Latitude < 40.82 & Longitude >= -74.04 & Longitude < -73.92)
 
+teatros = read.csv('./data/teatros.csv')
+teatros = mutate(teatros,
+          Nome = as.character(teatros$Nome),
+          Logradouro = as.character(teatros$Logradouro),
+          Latitude = as.numeric(as.character(teatros$Latitude)),
+          Longitude = as.numeric(as.character(teatros$Longitude)))
+teatros = teatros %>%
+  filter(Latitude >= 40.70 & Latitude < 40.82 & Longitude >= -74.04 & Longitude < -73.92)
+
 #Unindo os pontos de interesse em um Ãºnico dataset
 pontosInteresse = full_join(bares.e.restaurantes, estacoes.metro)
+pontosInteresse = full_join(pontosInteresse, teatros)
 
 #Identifica a qual quadrante pertence cada ponto de interesse
 locais = merge(mapa.quadrantes, pontosInteresse) %>% 
@@ -113,8 +123,8 @@ buscar.locais <- function(quadrante) {
   locais.do.quadrante 
 }
 
-local.teste = buscar.locais("q1888") 
-local.teste 
+local.teste = buscar.locais("q1525") 
+local.teste
 ```
 
 
@@ -219,18 +229,27 @@ top.5.destinos <- corridas.dentro %>%
 top.5.destinos
 ```
 
-A partir dos quadrantes top 5 de origem e destino, encontramos os locais de partida e de destinos mais comuns das corridas.
+A partir dos quadrantes top 5 de origem e destino, encontramos os locais de partida e de destinos mais comuns das corridas, que como demonstrado também nas análises gráficas são pontos que coincidem.
 
 ```{r }
-locais.top.quater.origem = head(top.5.origens, n=1)$pickup_quater
+locais.top.quater.origem = top.5.origens$pickup_quater[4]
 locais.top.quater.origem = buscar.locais(locais.top.quater.origem)
 locais.top.quater.origem
-
+```
+```{r }
 locais.top.quater.destino = head(top.5.destinos, n=1)$dropoff_quater
 locais.top.quater.destino = buscar.locais(locais.top.quater.destino)
 locais.top.quater.destino
 ```
 
+
+No exemplo abaixo vemos um quadrante que possui alta frequancia como ponto de origem, e podemos idenficar que os locais relacionados são cafés, restaurantes, um polo de alimentação.
+
+```{r }
+locais.top.quater.origem = top.5.origens$pickup_quater[5]
+locais.top.quater.origem = buscar.locais(locais.top.quater.origem)
+locais.top.quater.origem
+```
 
 ## Rotas das corridas
 
@@ -268,10 +287,6 @@ buscar.rota <- function(x.origem, y.origem, x.destino, y.destino) {
   rota
 }
 
-#teste.rota = buscar.rotas(34, 29, 33,38)
-teste.rota = buscar.rota(4, 1, 1, 4)
-teste.rota
-
 buscar.rota.por.corrida.id <- function(corridas, corrida.id) {
   corrida = corridas %>% 
     filter(id == corrida.id)
@@ -282,12 +297,9 @@ buscar.rota.por.corrida.id <- function(corridas, corrida.id) {
     
     rota.corrida
 }
-
-teste.rota.id = buscar.rota.por.corrida.id(corridas.dentro, 'id2875421')
-teste.rota.id
 ```
 
-E como temos a rota, podemos verificar os locais intermediarios que uma corrida possivelmente passou para chegar ao seu destino
+E como temos a rota, podemos verificar os locais intermediarios que uma corrida possivelmente passou para chegar ao seu destino.
 
 
 ```{r }
@@ -302,7 +314,12 @@ buscar.locais.por.corrida.id <- function(corridas, corrida.id) {
   locais.rota
 }
 
-#Exemplo 01
+```
+
+No exemplo abaixo podemos perceber que o ponto de partida da corrida é proximo a um teatro, e a rota segue próxima a várias estações de metrô.
+
+```{r }
+#Exemplo
 buscar.locais.por.corrida.id(corridas.dentro, 'id2875421')
 ```
 
