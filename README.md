@@ -1,11 +1,11 @@
-# Análise corridas de Taxí em Nova York
+# Análise corridas de Táxi em Nova York
 
 ## Autores
 
-Carolene Bertoldi
-Henrique Braga
-Igor Chaves
-Marco Antônio Bonamichi
+	- Carolene Bertoldi
+	- Henrique Braga
+	- Igor Chaves
+	- Marco Antônio Bonamichi
 
 ## Introdução
 
